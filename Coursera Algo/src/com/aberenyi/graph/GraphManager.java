@@ -1,12 +1,17 @@
 package com.aberenyi.graph;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeSet;
 
 public class GraphManager {
@@ -77,13 +82,14 @@ public class GraphManager {
      * @return The Graph with adjacency list initialized.
      */
     public static Graph readGraph(String fileName) {
-        Graph g = new MultiGraph();
+        Graph g = new Graph();
         BufferedReader br = null;
         try {
             FileReader fi = new FileReader(fileName);
             br = new BufferedReader(fi);
             String line = null;
             boolean first = true;
+            int edgeKey = 0;
             while ((line = br.readLine()) != null) {
                 if (first) {
                     first = false;
@@ -92,7 +98,7 @@ public class GraphManager {
                 String[] elements = line.split(DELIMITER);
                 int vertex1 = Integer.parseInt(elements[0]);
                 Vertex v1 = new Vertex(vertex1);
-                if (!g.containsVertex(v1)) {
+                if (!g.containsVertex(vertex1)) {
                     g.addVertex(v1);
                 }
                 int vertex2 = Integer.parseInt(elements[1]);
@@ -102,8 +108,7 @@ public class GraphManager {
                 }
                 int cost = Integer.parseInt(elements[2]);
                 Edge edge = new Edge(v1, v2, cost);
-                v1.addEdge(edge);
-                v2.addEdge(edge);
+                edge.setIntKey(edgeKey++);
                 g.addEdge(edge);
             }
 
@@ -189,13 +194,13 @@ public class GraphManager {
      *            "6   155 56  52  120 ......". This just means that the vertex
      *            with label 6 is adjacent to (i.e., shares an edge with) the
      *            vertices with labels 155,56,52,120,......,etc
-     * @param isSimple If true, assume that the input represents a simple map.
      * 
-     * @return The graph with edges and vertices connected, no self-loops or
-     *         double edges allowed, all edge weights are 1.
+     * @return The degree of each vertex in the file.
      */
-    public static void loadSimpleGraphFromAdjacencyList(String fileName, Graph g) {
-        Set<String> edgeSet = new TreeSet<>();
+    public static Map<Integer,Integer> loadSimpleGraphFromAdjacencyList(String fileName, Graph g) {
+        Map<Integer,Integer> vertexDegree = new HashMap<Integer, Integer>();
+        Set<String> connectivitySet = new TreeSet<String>();
+        int edgeKey = 0;
         BufferedReader br = null;
         try {
             FileReader fi = new FileReader(fileName);
@@ -203,19 +208,27 @@ public class GraphManager {
             String line = null;
             while ((line = br.readLine()) != null) {
                 String[] elements = line.split(DELIMITER);
-                // The first column always has a new vertex that we haven't seen
+                
                 final int key1 = Integer.parseInt(elements[0]);
                 Vertex v1 = g.getCreateAddVertex(key1);
+                vertexDegree.put(key1, elements.length -1);
                 if (elements.length == 1) {
                     g.addVertex(v1);
                     continue;
                 }
                 for (int i = 1; i < elements.length; i++) {
-                    Vertex v2 = g.getCreateAddVertex((Integer.parseInt(elements[i])));
-                    Edge edge = new Edge(v1, v2);
-                    g.addEdge(edge);
+                    final int key2 = Integer.parseInt(elements[i]);
+                    Vertex v2 = g.getCreateAddVertex(key2);
+                    String key = Edge.getUndirectedConnectivityString(v1, v2);
+                    if(key1 == key2)
+                        System.out.println("self loop: " + key1);
+                    if(!connectivitySet.contains(key) && (key1 != key2)) {
+                        Edge edge = new Edge(edgeKey++, v1, v2);
+                        edge.setIntKey(edgeKey++);
+                        connectivitySet.add(key);
+                        g.addEdge(edge);
+                    }
                 }
-                
             }
 
         } catch (FileNotFoundException e) {
@@ -229,6 +242,38 @@ public class GraphManager {
                 e.printStackTrace();
             }
         }
+        return vertexDegree;
+    }
+    
+    public static void writeToAdjacencyList(Graph g, String fileName) {
+        BufferedWriter br = null;
+        try {
+            br = new BufferedWriter(new FileWriter(fileName));
+            // sort by vertex label
+            SortedSet<Vertex> ss = new TreeSet<Vertex>(g.getVertices());
+            for (Vertex vertex : ss) {
+                br.write(vertex.getLocalCluster() + "\n");
+            }
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                br.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        
+    }
+    
+    public static String toAdjacencyList(Graph g) {
+        String s = "";
+        SortedSet<Vertex> ss = new TreeSet<Vertex>(g.getVertices());
+        for (Vertex vertex : ss) {
+            s += vertex.getLocalCluster() + "\n";
+        }
+        return s;
     }
     
     

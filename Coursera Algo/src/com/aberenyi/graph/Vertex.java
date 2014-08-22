@@ -1,10 +1,9 @@
 package com.aberenyi.graph;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Map;
-import java.util.TreeMap;
-
-import com.aberenyi.graph.Graph.EdgeComparator;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * A.K.A Node that can be used in an undirected Graph. It has an integer label
@@ -13,22 +12,14 @@ import com.aberenyi.graph.Graph.EdgeComparator;
  * @author aberenyi
  * 
  */
-public class Vertex implements Comparable<Vertex> {
+public class Vertex implements Comparable<Vertex>, Cloneable {
 
-    private EdgeComparator edgeComparator;
     private Integer label;
-
-    /**
-     * @param edgeComparator the edgeComparator to set
-     */
-    public void setEdgeComparator(EdgeComparator edgeComparator) {
-        this.edgeComparator = edgeComparator;
-    }
 
     /**
      * List of incident edges.
      */
-    private Map<Edge, Edge> edges;
+    private Collection<Edge> edges;
 
     /**
      * @return the label
@@ -48,25 +39,9 @@ public class Vertex implements Comparable<Vertex> {
      * @return the edges
      */
     public Collection<Edge> getEdges() {
-        return edges.values();
+        return edges;
     }
-
-    /**
-     * @param edges the edges to set
-     */
-    public void setEdges(Collection<Edge> edges) {
-        this.edges = new TreeMap<>(edgeComparator);
-        for (Edge edge : edges) {
-            this.edges.put(edge, edge);
-        }
-    }
-
-    public void addEdge(Edge edge) {
-        if (edges == null)
-            edges = new TreeMap<>(edgeComparator);
-        edges.put(edge, edge);
-    }
-
+    
     /**
      * @param label
      */
@@ -74,14 +49,53 @@ public class Vertex implements Comparable<Vertex> {
         this.label = label;
     }
 
-    /**
-     * @param label
-     */
-    public Vertex(Integer label, EdgeComparator edgeComparator) {
-        this.label = label;
-        this.edgeComparator = edgeComparator;
+    public Collection<Vertex> getNeighboringVertices() {
+        Set<Vertex> v = new TreeSet<Vertex>();
+        for (Edge edge : getEdges()) {
+            if (edge.getVertex1() != this)
+                v.add(edge.getVertex1());
+            if (edge.getVertex2() != this)
+                v.add(edge.getVertex2());
+        }
+        return v;
     }
 
+    /**
+     * Get the sorted order of neighboring vertices, excluding this vertex.
+     * 
+     * @return
+     */
+    public String getNeighboringVerticesAsString() {
+        String answer = "";
+        for (Vertex v : getNeighboringVertices()) {
+            answer += v.getLabel() + " ";
+        }
+        int i = answer.lastIndexOf(' ');
+        if (i > 0)
+            answer = answer.substring(0, answer.length() - 1);
+        return answer;
+    }
+    
+    /**
+     * Same as getNeighboringVerticesAsString() but includes this vertex's 
+     * label as the first item.
+     * 
+     * @return
+     */
+    public String getLocalCluster() {
+        return "" + getLabel() + " " + getNeighboringVerticesAsString();
+    }
+
+    public void addEdge(Edge edge) {
+        if (edges == null)
+            edges = new ArrayList<Edge>();
+        edges.add(edge);
+    }
+    
+    public boolean removeEdge(Edge edge) {
+        return getEdges().remove(edge);        
+    }
+    
     /**
      * Hash code generated based on the unique vertex label.
      * 
@@ -150,19 +164,28 @@ public class Vertex implements Comparable<Vertex> {
      * Check if an edge connects this Vertex to the other. If the other is this
      * then its connected.
      * 
-     * @param v
+     * @param otherVertex
      * @return
      */
-    public boolean isConnected(Vertex v) {
+    public boolean isConnected(Vertex otherVertex) {
         if (edges == null)
             return false;
-        for (Edge edge : edges.values()) {
-            if ((edge.vertex1.label.equals(v.label) || edge.vertex2.label
-                    .equals(v.label))) {
+        for (Edge edge : edges) {
+            if ((edge.vertex1.equals(otherVertex) || edge.vertex2
+                    .equals(otherVertex))) {
                 return true;
             }
         }
         return false;
     }
 
+    /**
+     * @see java.lang.Object#clone()
+     */
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        return super.clone();
+    }
+
+    
 }

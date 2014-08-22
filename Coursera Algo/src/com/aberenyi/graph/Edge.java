@@ -17,25 +17,9 @@ public class Edge implements Comparable<Edge> {
     Vertex vertex1;
     Vertex vertex2;
     int cost;
-    public static Comparator<Edge> comparator;
-    private String key;
-    private Integer intKey;
-    
-    /**
-     * Compare two edges purely based on their hashCode().
-     */
-    public static class HashCodeComparator implements Comparator<Edge> {
+    public static Comparator<Edge> comparator = new IntKeyComparator();
+    Integer intKey;
 
-        @Override
-        public int compare(Edge o1, Edge o2) {
-            if(o1.hashCode() < o2.hashCode())
-                return -1;
-            if(o1.hashCode() > o2.hashCode())
-                return 1;
-            return 0;
-        }
-    }
-    
     /**
      * Compare two edges purely based on their cost.
      */
@@ -51,32 +35,18 @@ public class Edge implements Comparable<Edge> {
         }
     }
 
-    
-    
     /**
      * Compare two Edges, if their end points are the same vertices they are
      * equal. Otherwise order them by hashcode for performance.
      */
-    public static class KeyComparator implements Comparator<Edge> {
+    public static class IntKeyComparator implements Comparator<Edge> {
 
         @Override
-        public int compare(Edge o1, Edge o2) {
-            return o1.key.compareTo(o2.key);
+        public int compare(Edge e1, Edge e2) {
+            if (e1 == e2)
+                return 0;
+            return e1.intKey.compareTo(e2.intKey);
         }
-    }
-
-    /**
-     * @return the key
-     */
-    public String getKey() {
-        return key;
-    }
-
-    /**
-     * @param key the key to set
-     */
-    public void setKey(String key) {
-        this.key = key;
     }
 
     /**
@@ -141,7 +111,7 @@ public class Edge implements Comparable<Edge> {
     public void setCost(int cost) {
         this.cost = cost;
     }
-    
+
     /**
      * Utility ctor that creates two vertices from the passed in int.
      * 
@@ -174,7 +144,7 @@ public class Edge implements Comparable<Edge> {
 
     /**
      * Create an Edge that connects two Vertices and add this Edge to the
-     * vertices. Generates a key from the labels of the vertices the two
+     * vertices. Adds this edge to the two vertices.
      * 
      * @param vertex1
      * @param vertex2
@@ -184,11 +154,29 @@ public class Edge implements Comparable<Edge> {
         this.cost = cost;
         this.vertex1 = vertex1;
         this.vertex2 = vertex2;
-        if(vertex1.getLabel() < vertex2.getLabel()) {
-            key = "" + vertex1.getLabel() + ":" + vertex2.getLabel();
-        } else {
-            key = "" + vertex2.getLabel() + ":" + vertex1.getLabel();
-        }
+        vertex1.addEdge(this);
+        vertex2.addEdge(this);
+    }
+    
+    /**
+     * Create an Edge that connects two Vertices and add this Edge to the
+     * vertices. Adds this edge to the two vertices.
+     * 
+     * @param vertex1
+     * @param vertex2
+     * @param cost Edge cost
+     */
+    public Edge(int intKey, Vertex vertex1, Vertex vertex2, int cost) {
+        this.intKey = intKey;
+        this.cost = cost;
+        this.vertex1 = vertex1;
+        this.vertex2 = vertex2;
+        vertex1.addEdge(this);
+        vertex2.addEdge(this);
+    }
+
+    public Edge(int intKey, Vertex v1, Vertex v2) {
+        this(intKey, v1, v2, DEFAULT_COST);
     }
 
     /**
@@ -199,8 +187,8 @@ public class Edge implements Comparable<Edge> {
      * @return
      */
     public boolean isParallel(Edge o2) {
-        if ((vertex1.equals(o2.vertex1) && vertex2.equals(o2.vertex2)) ||
-             (vertex1.equals(o2.vertex2) && vertex2.equals(o2.vertex1) )) {
+        if ((vertex1.equals(o2.vertex1) && vertex2.equals(o2.vertex2))
+                || (vertex1.equals(o2.vertex2) && vertex2.equals(o2.vertex1))) {
             return true;
         }
         return false;
@@ -225,7 +213,7 @@ public class Edge implements Comparable<Edge> {
 
     @Override
     public int compareTo(Edge o) {
-        return comparator.compare(this, o);
+        return this.intKey.compareTo(o.intKey);
     }
 
     /**
@@ -233,7 +221,7 @@ public class Edge implements Comparable<Edge> {
      */
     @Override
     public int hashCode() {
-        return intKey.hashCode();
+        return intKey;
     }
 
     /**
@@ -241,8 +229,44 @@ public class Edge implements Comparable<Edge> {
      */
     @Override
     public boolean equals(Object obj) {
-        return comparator.compare(this, (Edge) obj) == 0;
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        return intKey.equals(((Edge) obj).intKey);
     }
-    
+
+    /**
+     * Get a label that indicates the connection between the two endpoints.
+     * 
+     * @return The vertex labels concatenated with a colon. The label with the
+     *         smaller numerical value comes first.
+     */
+    public String getUndirectedConnectivityString() {
+        return getUndirectedConnectivityString(vertex1, vertex2);
+    }
+
+    public static String getUndirectedConnectivityString(Vertex vertex1,
+            Vertex vertex2) {
+        String key;
+        if (vertex1.getLabel() < vertex2.getLabel()) {
+            key = "" + vertex1.getLabel() + ":" + vertex2.getLabel();
+        } else {
+            key = "" + vertex2.getLabel() + ":" + vertex1.getLabel();
+        }
+        return key;
+    }
+
+    public boolean isSelfLoop() {
+        if(vertex1 == null || vertex2 != null)
+            return false;
+        if(vertex1 != null || vertex2 == null)
+            return false;
+        if(vertex1 == null && vertex2 == null)
+            return true; // connecting null vertex
+        return vertex1.equals(vertex2);
+    }
 
 }
